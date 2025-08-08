@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Graduation Post Generator</title>
+  <style>
+    @font-face {
+      font-family: 'Futura';
+      src: url('./Futura.ttf') format('truetype');
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #eee;
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+    }
+
+    .form-section {
+      background: #fff;
+      padding: 10px 15px;
+      border-radius: 8px;
+      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+      width: 320px;
+      box-sizing: border-box;
+    }
+
+    .form-section input {
+      margin-bottom: 6px;
+      padding: 6px 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .form-section button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #021349;
+      color: white;
+    }
+
+    .form-section button:hover {
+      background: #0147a5;
+    }
+
+    .toggle-container {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 6px;
+      margin: 0 2px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #f4f4f4;
+    }
+
+    .toggle-btn.active {
+      background: #021349;
+      color: white;
+      border-color: #021349;
+    }
+
+    canvas {
+      border: 1px solid #ccc;
+      background: white;
+    }
+
+    #cardCanvas {
+      width: 270px; /* preview size */
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="form-section">
+    <h2>Graduation Post Generator</h2>
+
+    <div class="toggle-container">
+      <button class="toggle-btn active" onclick="setBackground('art2.png', this)">DZ</button>
+      <button class="toggle-btn" onclick="setBackground('art1.png', this)">CAD</button>
+      <button class="toggle-btn" onclick="setBackground('art3.png', this)">SYN</button>
+      <button class="toggle-btn" onclick="setBackground('art4.png', this)">LW</button>
+    </div>
+
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="text" id="course" placeholder="Course" required />
+    <input type="file" id="photoInput" accept="image/*" required />
+    <button onclick="generateCard()">Download PNG</button>
+  </div>
+
+  <canvas id="cardCanvas" width="1080" height="1538"></canvas>
+
+  <script>
+    let uploadedPhoto = "";
+    let backgroundImage = "art2.png"; // default
+    let nameFontColor = "#f23886"; // default
+    let courseFontColor = "#f9f0ea"; // default
+
+    function loadImageAsync(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Failed to load image: " + src));
+        img.src = src;
+      });
+    }
+
+    function setBackground(file, btn) {
+  backgroundImage = file;
+  document.querySelectorAll(".toggle-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+
+  if (file === "art1.png") { // CAD
+    nameFontColor = "#423a39";
+    courseFontColor = "#e3e3e3";
+  } 
+  else if (file === "art3.png") { // SYN
+    nameFontColor = "#3d6baf";
+    courseFontColor = "#e3e3e3";
+  } 
+  else if (file === "art4.png") { // LW
+    nameFontColor = "#423a39";
+    courseFontColor = "#e3e3e3";
+  } 
+  else { // DZ or default
+    nameFontColor = "#f23886";
+    courseFontColor = "#f9f0ea";
+  }
+
+  drawCard();
+}
+
+
+    document.getElementById("photoInput").addEventListener("change", function () {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        uploadedPhoto = e.target.result;
+        drawCard();
+      };
+      reader.readAsDataURL(this.files[0]);
+    });
+
+    document.getElementById("name").addEventListener("input", drawCard);
+    document.getElementById("course").addEventListener("input", drawCard);
+
+    async function drawCard() {
+      await document.fonts.load("60px Futura");
+
+      const canvas = document.getElementById("cardCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const bg = await loadImageAsync("./" + backgroundImage);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+
+      const photo = await loadImageAsync(uploadedPhoto || "./previewImage.jfif");
+
+      const photoX = 113, photoY = 312, photoWidth = 860, photoHeight = 863;
+      const tiltAngle = 0.02;
+
+      const minSide = Math.min(photo.width, photo.height);
+      const cropX = (photo.width - minSide) / 2;
+      const cropY = (photo.height - minSide) / 2;
+
+      ctx.save();
+      ctx.translate(photoX + photoWidth / 2, photoY + photoHeight / 2);
+      ctx.rotate(tiltAngle);
+      ctx.drawImage(photo, cropX, cropY, minSide, minSide, -photoWidth / 2, -photoHeight / 2, photoWidth, photoHeight);
+      ctx.restore();
+
+      // Name text
+      ctx.save();
+      ctx.translate(145, 1262);
+      ctx.rotate(0.02);
+      ctx.fillStyle = nameFontColor;
+      ctx.font = "bold 48px Futura";
+      ctx.fillText(document.getElementById("name").value, 0, 0);
+      ctx.restore();
+
+      // Course text
+      ctx.save();
+      ctx.translate(145, 1327);
+      ctx.rotate(0.02);
+      ctx.fillStyle = courseFontColor;
+      ctx.font = "bold 32px Futura";
+      ctx.fillText(document.getElementById("course").value, 0, 0);
+      ctx.restore();
+    }
+
+    function generateCard() {
+      const canvas = document.getElementById("cardCanvas");
+      const link = document.createElement("a");
+      link.download = document.getElementById("name").value.trim().replace(/\s+/g, "") + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    // Initial draw
+    drawCard();
+  </script>
+</body>
+</html>
